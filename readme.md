@@ -1,4 +1,4 @@
-# Python Suzano - Exercice List
+# Python Suzano - Exercice List *CONTENT FIXATION*
 
 Exercice list to apply the content seen from course "DIO - Python Suzano" about Python Language (Beginner - Intermediate). 
 
