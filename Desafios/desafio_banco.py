@@ -1,19 +1,23 @@
+# Importação das bibliotecas necessárias
 import textwrap
 from abc import ABC, abstractclassmethod, abstractproperty
 from datetime import datetime
 
 
+# Classe para iterar sobre as contas bancárias
 class ContasIterador:
     def __init__(self, contas):
         self.contas = contas
         self._index = 0
 
+    # Métodos para tornar a classe iterável
     def __iter__(self):
         return self
 
     def __next__(self):
         try:
             conta = self.contas[self._index]
+            # Retorna uma string formatada com os dados da conta
             return f"""\
             Agência:\t{conta.agencia}
             Número:\t\t{conta.numero}
@@ -26,19 +30,23 @@ class ContasIterador:
             self._index += 1
 
 
+# Classe base para clientes
 class Cliente:
     def __init__(self, endereco):
         self.endereco = endereco
         self.contas = []
         self.indice_conta = 0
 
+    # Método para realizar transações nas contas
     def realizar_transacao(self, conta, transacao):
         transacao.registrar(conta)
 
+    # Método para adicionar uma nova conta ao cliente
     def adicionar_conta(self, conta):
         self.contas.append(conta)
 
 
+# Classe específica para pessoas físicas
 class PessoaFisica(Cliente):
     def __init__(self, nome, data_nascimento, cpf, endereco):
         super().__init__(endereco)
@@ -47,6 +55,7 @@ class PessoaFisica(Cliente):
         self.cpf = cpf
 
 
+# Classe base para contas bancárias
 class Conta:
     def __init__(self, numero, cliente):
         self._saldo = 0
@@ -55,10 +64,12 @@ class Conta:
         self._cliente = cliente
         self._historico = Historico()
 
+    # Método de classe para criar nova conta
     @classmethod
     def nova_conta(cls, cliente, numero):
         return cls(numero, cliente)
 
+    # Properties para acesso controlado aos atributos
     @property
     def saldo(self):
         return self._saldo
@@ -79,40 +90,41 @@ class Conta:
     def historico(self):
         return self._historico
 
+    # Método para realizar saques
     def sacar(self, valor):
         saldo = self.saldo
         excedeu_saldo = valor > saldo
 
         if excedeu_saldo:
             print("\n@@@ Operação falhou! Você não tem saldo suficiente. @@@")
-
+            return False
         elif valor > 0:
             self._saldo -= valor
             print("\n=== Saque realizado com sucesso! ===")
             return True
-
-        else:
-            print("\n@@@ Operação falhou! O valor informado é inválido. @@@")
-
-        return False
-
-    def depositar(self, valor):
-        if valor > 0:
-            self._saldo += valor
-            print("\n=== Depósito realizado com sucesso! ===")
         else:
             print("\n@@@ Operação falhou! O valor informado é inválido. @@@")
             return False
 
-        return True
+    # Método para realizar depósitos
+    def depositar(self, valor):
+        if valor > 0:
+            self._saldo += valor
+            print("\n=== Depósito realizado com sucesso! ===")
+            return True
+        else:
+            print("\n@@@ Operação falhou! O valor informado é inválido. @@@")
+            return False
 
 
+# Classe específica para conta corrente
 class ContaCorrente(Conta):
     def __init__(self, numero, cliente, limite=500, limite_saques=3):
         super().__init__(numero, cliente)
         self._limite = limite
         self._limite_saques = limite_saques
 
+    # Sobrescreve o método sacar com regras específicas
     def sacar(self, valor):
         numero_saques = len(
             [transacao for transacao in self.historico.transacoes if transacao["tipo"] == Saque.__name__]
@@ -123,23 +135,15 @@ class ContaCorrente(Conta):
 
         if excedeu_limite:
             print("\n@@@ Operação falhou! O valor do saque excede o limite. @@@")
-
         elif excedeu_saques:
             print("\n@@@ Operação falhou! Número máximo de saques excedido. @@@")
-
         else:
             return super().sacar(valor)
 
         return False
 
-    def __str__(self):
-        return f"""\
-            Agência:\t{self.agencia}
-            C/C:\t\t{self.numero}
-            Titular:\t{self.cliente.nome}
-        """
 
-
+# Classe para gerenciar o histórico de transações
 class Historico:
     def __init__(self):
         self._transacoes = []
@@ -148,6 +152,7 @@ class Historico:
     def transacoes(self):
         return self._transacoes
 
+    # Método para adicionar nova transação ao histórico
     def adicionar_transacao(self, transacao):
         self._transacoes.append(
             {
@@ -157,12 +162,14 @@ class Historico:
             }
         )
 
+    # Método para gerar relatório de transações
     def gerar_relatorio(self, tipo_transacao=None):
         for transacao in self._transacoes:
             if tipo_transacao is None or transacao["tipo"].lower() == tipo_transacao.lower():
                 yield transacao
 
 
+# Classe abstrata base para transações, ou seja, uma classe que não pode ser instanciada diretamente.
 class Transacao(ABC):
     @property
     @abstractproperty
@@ -174,6 +181,7 @@ class Transacao(ABC):
         pass
 
 
+# Classe específica para operações de saque
 class Saque(Transacao):
     def __init__(self, valor):
         self._valor = valor
@@ -184,11 +192,11 @@ class Saque(Transacao):
 
     def registrar(self, conta):
         sucesso_transacao = conta.sacar(self.valor)
-
         if sucesso_transacao:
             conta.historico.adicionar_transacao(self)
 
 
+# Classe específica para operações de depósito
 class Deposito(Transacao):
     def __init__(self, valor):
         self._valor = valor
@@ -199,20 +207,20 @@ class Deposito(Transacao):
 
     def registrar(self, conta):
         sucesso_transacao = conta.depositar(self.valor)
-
         if sucesso_transacao:
             conta.historico.adicionar_transacao(self)
 
 
+# Decorador para logging de transações
 def log_transacao(func):
     def envelope(*args, **kwargs):
         resultado = func(*args, **kwargs)
         print(f"{datetime.now()}: {func.__name__.upper()}")
         return resultado
-
     return envelope
 
 
+# Função que exibe o menu principal
 def menu():
     menu = """\n
     ================ MENU ================
@@ -227,6 +235,7 @@ def menu():
     return input(textwrap.dedent(menu))
 
 
+# Funções auxiliares para operações bancárias
 def filtrar_cliente(cpf, clientes):
     clientes_filtrados = [cliente for cliente in clientes if cliente.cpf == cpf]
     return clientes_filtrados[0] if clientes_filtrados else None
@@ -236,11 +245,10 @@ def recuperar_conta_cliente(cliente):
     if not cliente.contas:
         print("\n@@@ Cliente não possui conta! @@@")
         return
-
-    # FIXME: não permite cliente escolher a conta
     return cliente.contas[0]
 
 
+# Operações principais do sistema
 @log_transacao
 def depositar(clientes):
     cpf = input("Informe o CPF do cliente: ")
@@ -349,6 +357,7 @@ def listar_contas(contas):
         print(textwrap.dedent(str(conta)))
 
 
+# Função principal que controla o fluxo do programa
 def main():
     clientes = []
     contas = []
@@ -382,4 +391,5 @@ def main():
             print("\n@@@ Operação inválida, por favor selecione novamente a operação desejada. @@@")
 
 
+# Execução do programa
 main()
